@@ -39,8 +39,7 @@ openssl-sys = { version = "0.9", optional = true }
 
 [target.wasm32-unknown-unknown.dependencies]
 compiler-rt-builtins = "0.1"
-getrandom = { version = "0.2", features = ["js"] }
-js-sys = "0.3"
+getrandom = { version = "0.2" }
 wasm32-unknown-unknown-openbsd-libc = "0.2"
 
 [build-dependencies]
