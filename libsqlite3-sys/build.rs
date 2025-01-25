@@ -99,6 +99,7 @@ mod build_bundled {
 
     pub fn main(out_dir: &str, out_path: &Path) {
         let lib_name = super::lib_name();
+        println!("cargo:warning={lib_name} build_bundled");
 
         // This is just a sanity check, the top level `main` should ensure this.
         assert!(!(cfg!(feature = "bundled-windows") && !cfg!(feature = "bundled") && !win_target()),
@@ -117,6 +118,8 @@ mod build_bundled {
         println!("cargo:include={}/{lib_name}", env!("CARGO_MANIFEST_DIR"));
         println!("cargo:rerun-if-changed={lib_name}/sqlite3.c");
         println!("cargo:rerun-if-changed=sqlite3/wasm32-wasi-vfs.c");
+        println!("cargo:rerun-if-env-changed=sqlite3/sqlite-vec.o");
+        println!("cargo:rerun-if-env-changed=sqlite3/sqlite-vec.c");
         let mut cfg = cc::Build::new();
         cfg.file(format!("{lib_name}/sqlite3.c"))
             .flag("-DSQLITE_CORE")
@@ -279,7 +282,12 @@ mod build_bundled {
                 }
             }
 
-            cfg.flag("-DSQLITE_OS_OTHER")
+            cfg.file("sqlite3/init-vec.c")
+                .file("sqlite3/sqlite-vec.c")
+                // .object("sqlite/sqlite-vec.o") // tried static version compiled separately but no difference
+                .flag("-DSQLITE_VEC_OMIT_FS")
+                .flag("-DSQLITE_EXTRA_INIT=sqlite3_wasm_vec_init")
+                .flag("-DSQLITE_OS_OTHER")
                 .flag("-DSQLITE_TEMP_STORE=3")
                 .flag("-DSQLITE_OMIT_LOCALTIME")
                 .flag("-Wno-incompatible-library-redeclaration");
@@ -304,13 +312,12 @@ mod build_bundled {
                     cfg.flag(&format!("-m{feature}"));
                 }
             }
-
             cfg.include(
                 std::env::var_os("DEP_WASM32_UNKNOWN_UNKNOWN_OPENBSD_LIBC_INCLUDE").unwrap(),
             );
 
             println!("cargo:rustc-link-lib=compiler-rt-builtins");
-            println!("cargo:rustc-link-lib=wasm32-unknown-unknown-openbsd-libc");
+            println!("cargo:rustc-link-lib=static=wasm32-unknown-unknown-openbsd-libc");
         }
         if cfg!(feature = "unlock_notify") {
             cfg.flag("-DSQLITE_ENABLE_UNLOCK_NOTIFY");
@@ -351,6 +358,7 @@ mod build_bundled {
         println!("cargo:rerun-if-env-changed=LIBSQLITE3_FLAGS");
 
         cfg.compile(lib_name);
+        println!("cargo:warning={lib_name} set to {out_dir}");
 
         println!("cargo:lib_dir={out_dir}");
     }

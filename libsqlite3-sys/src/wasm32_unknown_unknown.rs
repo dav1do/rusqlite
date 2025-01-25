@@ -169,7 +169,9 @@ pub unsafe extern "C" fn wasm_vfs_randomness(
     zByte: *mut c_char,
 ) -> c_int {
     let slice = std::slice::from_raw_parts_mut(zByte as *mut u8, nByte as usize);
-    getrandom::getrandom(slice).unwrap_or_else(|_| std::process::abort());
+    // getrandom::getrandom(slice).unwrap_or_else(|_| std::process::abort());
+    let data = (0..slice.len()).map(|_| 0_u128 as u8).collect::<Vec<_>>();
+    slice.copy_from_slice(&data);
     SQLITE_OK
 }
 
